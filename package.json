@@ -1,0 +1,25 @@
+{
+  "name": "tomer",
+  "version": "0.0.1",
+  "description": "My NodeJs logger implementation",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --build ./tsconfig.json",
+    "dev": "npm run build && node ./dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/royiro10/tomer.git"
+  },
+  "author": "Roy Schenker",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/royiro10/tomer/issues"
+  },
+  "homepage": "https://github.com/royiro10/tomer#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.16",
+    "typescript": "^5.3.3"
+  }
+}

@@ -26,10 +26,6 @@ export function makeConsoleLogger(): ConsoleLogger {
         progresesTracker.forEach((v, k, m) => m.set(k, v + 1));
     }
 
-    function incrementProgressTrackerExcept(keyToIgnore: number) {
-        progresesTracker.forEach((v, k, m) => { if (k !== keyToIgnore) m.set(k, v + 1); });
-    }
-
     function progress(progressId: number, precent: number) {
         const { defer, setDefer } = makeDefer();
 

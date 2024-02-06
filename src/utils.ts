@@ -14,3 +14,15 @@ export function findMax<T>(items: Array<T>, extractionPredicate: (item: T) => nu
 
     return currentMax;
 }
+
+type SetDeferFunc = (func: () => void) => void;
+
+// a custom hook like to created defered functions
+export function makeDefer() {
+    let deferedCallback: () => void = () => { }; // default to noop
+
+    const setDefer: SetDeferFunc = (func: () => void) => deferedCallback = func;
+    const defer = () => deferedCallback();
+
+    return { defer, setDefer };
+}

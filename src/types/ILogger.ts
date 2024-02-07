@@ -13,12 +13,12 @@ export type Loggable = {
     [k in LOG_LEVELS]: (msg: LogMessage) => void
 };
 
-export type LogRequets = {
+export type LogRequest = {
     data: LogMessage,
     level: LOG_LEVELS;
 };
 
-export type LogTransformation = (req: LogRequets) => LogRequets;
+export type LogTransformation = (req: LogRequest) => LogRequest;
 
 export type TransformationStack = Array<LogTransformation>;
 
@@ -27,3 +27,5 @@ export interface ILogger extends Loggable {
     transformations: TransformationStack;
     withTransformation: (tranformation: LogTransformation) => ILogger;
 }
+
+export interface LoggerOptions { }

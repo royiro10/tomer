@@ -1,24 +1,38 @@
 
-import { makeBaseLogger, transform } from "./BaseLogger";
-import { ILogger, LogRequets } from "./types/ILogger";
-import { makeDefer } from "./utils";
+import { makeBaseLogger } from "./BaseLogger";
+import { ILogger, LOG_LEVELS, LogRequest } from "./types/ILogger";
+import { ConsoleLogger, ConsoleLoggerOptions } from "./types/ConsoleLogger";
+import { makeDefer, match } from "./utils";
 
-const PRINT_LOGO = false;
-let isFirst = true;
-
-export interface ConsoleLogger extends ILogger {
-    progress(progressId: number, precent: number): void;
+const DEFUALT_OPTIONS: ConsoleLoggerOptions = {
+    SHOULD_REWRITE_NEW_LINE: true
 };
 
-export function makeConsoleLogger(): ConsoleLogger {
-    const logger: ILogger = makeBaseLogger(log);
+export function makeConsoleLogger(opts?: ConsoleLoggerOptions): ConsoleLogger {
+    const options = opts ? { ...DEFUALT_OPTIONS, ...opts } : DEFUALT_OPTIONS;
+    const logger: ILogger = makeBaseLogger(log, options);
 
     /* progress tracker track progressId to the offest from latest line */
     const progresesTracker: Map<number, number> = new Map<number, number>();
 
-    function log(req: LogRequets) {
-        const logRequets: LogRequets = transform(logger, req);
-        writeLine(logRequets.data);
+    function getStreamByLevel(level: LOG_LEVELS): NodeJS.WriteStream & { fd: 2 | 1; } {
+        const stdLogger = match<
+            LOG_LEVELS,
+            NodeJS.WriteStream & { fd: 2 | 1; }
+        >(level, {
+            [LOG_LEVELS.ERROR]: () => process.stderr,
+            [LOG_LEVELS.WARN]: () => process.stderr,
+            [LOG_LEVELS.INFO]: () => process.stdout,
+            [LOG_LEVELS.DEBUG]: () => process.stdout,
+        });
+
+        return stdLogger;
+    }
+
+    function log(req: LogRequest) {
+        const stream = getStreamByLevel(req.level);
+        stream.write(req.data + '\n');
+
         incrementProgressTracker();
     }
 
@@ -26,7 +40,7 @@ export function makeConsoleLogger(): ConsoleLogger {
         progresesTracker.forEach((v, k, m) => m.set(k, v + 1));
     }
 
-    function progress(progressId: number, precent: number) {
+    function progress(progressId: number, precent: number, level: LOG_LEVELS = LOG_LEVELS.INFO) {
         const { defer, setDefer } = makeDefer();
 
         if (precent < 0 || precent > 1) {
@@ -46,7 +60,7 @@ export function makeConsoleLogger(): ConsoleLogger {
         // because the way console are set in case of rewrite overfloe terminal height, it can not be rewriten. :(
         if (linesOffest >= consoleHeight) {
             // you can pass SHOULD_REWRITE_NEW_LINE=true for it to just write a new line
-            if (!SHOULD_REWRITE_NEW_LINE) return;
+            if (!options.SHOULD_REWRITE_NEW_LINE) return;
 
             // write progress on new line
             linesOffest = 0;
@@ -55,7 +69,7 @@ export function makeConsoleLogger(): ConsoleLogger {
             setDefer(() => incrementProgressTracker());
         }
 
-        rewriteProgress(linesOffest, precent);
+        rewriteProgress(getStreamByLevel(level), linesOffest, precent);
 
         defer();
     }
@@ -65,30 +79,17 @@ export function makeConsoleLogger(): ConsoleLogger {
 }
 
 
-/* 
-  --------------------------------
- | Stdout Stream Implementations |
-  --------------------------------
-*/
+function rewriteProgress(stream: NodeJS.WriteStream, offset: number, precent: number, flags?: { isDetailed?: boolean; }): void {
+    const progressLineData = getProressLineData(stream, precent);
 
-type WriteDetails = {
-    writeIsDone: boolean;
-};
-
-const SHOULD_REWRITE_NEW_LINE = true;
-function rewriteProgress(offset: number, precent: number, flags?: { isDetailed?: boolean; }): WriteDetails | void {
-    const progressLineData = getProressLineData(precent);
-
-    process.stdout.moveCursor(0, -(offset));
-    process.stdout.clearLine(0);
-    const writeResult = writeLine(progressLineData, flags);
-    process.stdout.moveCursor(0, (offset));
-
-    return writeResult;
+    stream.moveCursor(0, -(offset));
+    stream.clearLine(0);
+    stream.write(progressLineData + '\n');
+    stream.moveCursor(0, (offset));
 }
 
-function getProressLineData(precent: number) {
-    const consoleWidth = process.stdout.columns;
+function getProressLineData(stream: NodeJS.WriteStream, precent: number) {
+    const consoleWidth = stream.columns;
     const progressLineWidth = consoleWidth - formatProgressLine("").length;
 
     const PROGRESS_DONE_SYMBOL = `█`;
@@ -104,58 +105,3 @@ function formatProgressLine(data: string): string {
     return ` => [ ${data} ]`;
 }
 
-function writeLine(msg: string, flags?: { isDetailed?: boolean; }): WriteDetails | void {
-    const msgBuffer = Buffer.from(`${msg}\n`);
-    const isDetailed = flags?.isDetailed || false;
-
-    // TODO : remove this to initizliaztion part
-    if (PRINT_LOGO && isFirst) {
-        isFirst = false;
-        writeLine(`${getLogo()}\n`);
-    }
-
-    if (isDetailed) {
-        return writeLine_Detailed(msgBuffer);
-    }
-
-    return writeLine_Naive(msgBuffer);
-}
-
-function writeLine_Naive(msg: Buffer): void {
-    process.stdout.write(msg);
-}
-
-function writeLine_Detailed(msg: Buffer): WriteDetails {
-    const writeDetails: WriteDetails = {
-        writeIsDone: false,
-    };
-
-    const _flushedSuccesfully = process.stdout.write(msg, () => {
-        writeDetails.writeIsDone = true;
-    });
-
-    return writeDetails;
-};
-
-
-
-function getLogo() {
-    const [x, y] = process.stdout.getWindowSize();
-    const MINIMAL_LOGO = `TOMER`;
-    const LOGO = `
-$$$$$$$$\\  $$$$$$\\  $$\\      $$\\ $$$$$$$$\\ $$$$$$$\\  
-\\__$$  __|$$  __$$\\ $$$\\    $$$ |$$  _____|$$  __$$\\ 
-   $$ |   $$ /  $$ |$$$$\\  $$$$ |$$ |      $$ |  $$ |
-   $$ |   $$ |  $$ |$$\\$$\\$$ $$ |$$$$$\\    $$$$$$$  |
-   $$ |   $$ |  $$ |$$ \\$$$  $$ |$$  __|   $$  __$$< 
-   $$ |   $$ |  $$ |$$ |\\$  /$$ |$$ |      $$ |  $$ |
-   $$ |    $$$$$$  |$$ | \\_/ $$ |$$$$$$$$\\ $$ |  $$ |
-   \\__|    \\______/ \\__|     \\__|\\________|\\__|  \\__|        
-    `;
-
-    const rows = LOGO.split('\n');
-    if (rows.length > y) return MINIMAL_LOGO;
-    if (rows.some(row => row.length > x)) return MINIMAL_LOGO;
-
-    return LOGO;
-}

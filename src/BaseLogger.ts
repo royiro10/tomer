@@ -1,11 +1,11 @@
-import { ILogger, LOG_LEVELS, LogMessage, LogRequets, LogTransformation, TransformationStack } from "./types/ILogger";
+import { LOG_LEVELS, type ILogger, type LogMessage, type LogRequest, type LogTransformation, type LoggerOptions, type TransformationStack } from "./types/ILogger";
 
 export const DEFAULT_FORMATERS = {
-    timestamp: (req: LogRequets) => {
+    timestamp: (req: LogRequest) => {
         req.data = `[${new Date().toISOString()}] ${req.data}`;
         return req;
     },
-    levelPrefix: (req: LogRequets) => {
+    levelPrefix: (req: LogRequest) => {
         req.data = `[${req.level.toUpperCase()}] ${req.data}`;
         return req;
     }
@@ -15,20 +15,20 @@ export function makeDefaultTransformationStack(): TransformationStack {
     return [DEFAULT_FORMATERS.levelPrefix, DEFAULT_FORMATERS.timestamp];
 }
 
-export function makeBaseLogger(log: (req: LogRequets) => void): ILogger {
+export function makeBaseLogger(log: (req: LogRequest) => void, _opts?: LoggerOptions): ILogger {
     const logger: ILogger = {
         transformations: makeDefaultTransformationStack(),
         withTransformation: (tranformation) => appendTransformation(logger, tranformation),
-        error: (msg: LogMessage) => log({ data: msg, level: LOG_LEVELS.ERROR }),
-        warn: (msg: LogMessage) => log({ data: msg, level: LOG_LEVELS.WARN }),
-        info: (msg: LogMessage) => log({ data: msg, level: LOG_LEVELS.INFO }),
-        debug: (msg: LogMessage) => log({ data: msg, level: LOG_LEVELS.DEBUG }),
+        error: (msg: LogMessage) => log(transform(logger, { data: msg, level: LOG_LEVELS.ERROR })),
+        warn: (msg: LogMessage) => log(transform(logger, { data: msg, level: LOG_LEVELS.WARN })),
+        info: (msg: LogMessage) => log(transform(logger, { data: msg, level: LOG_LEVELS.INFO })),
+        debug: (msg: LogMessage) => log(transform(logger, { data: msg, level: LOG_LEVELS.DEBUG })),
     };
 
     return logger;
 }
 
-export function transform(logger: ILogger, req: LogRequets): LogRequets {
+export function transform(logger: ILogger, req: LogRequest): LogRequest {
     return logger.transformations.reduce((transformedRequets, transform) => transform(transformedRequets), { ...req });
 }
 

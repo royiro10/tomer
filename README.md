@@ -4,7 +4,7 @@
 Tomer is my implementation of a logger utility in NodeJs.
 it is fun to write and helps me better understand node internals.
 
-```
+```txt
  /$$$$$$$$ /$$$$$$  /$$      /$$ /$$$$$$$$ /$$$$$$$
 |__  $$__//$$__  $$| $$$    /$$$| $$_____/| $$__  $$
    | $$  | $$  \ $$| $$$$  /$$$$| $$      | $$  \ $$

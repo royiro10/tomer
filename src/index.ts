@@ -1,7 +1,8 @@
-import { ConsoleLogger, makeConsoleLogger } from "./consoleLogger";
+import { makeConsoleLogger } from "./consoleLogger";
 import { ILogger } from "./types/ILogger";
+import { ConsoleLogger } from "./types/ConsoleLogger";
 
-const SLOW_RATE = 10;
+const SLOW_RATE = 100;
 main();
 
 async function main() {
@@ -22,12 +23,12 @@ async function task(taskId: number, logger: ConsoleLogger) {
 
     const SIZE = 15;
     for (let i = 1; i <= SIZE; i++) {
-        // await sleep(SLOW_RATE);
+        await sleep(SLOW_RATE);
         logger.progress(taskId, i / SIZE);
         await sleep(SLOW_RATE);
         logger.debug(`progress ${taskId} - ${i}/${SIZE}`);
-        // await sleep(SLOW_RATE);
-        // logger.progress(taskId + 1, (SIZE - i) / SIZE);
+        await sleep(SLOW_RATE);
+        logger.progress(taskId + 1, (SIZE - i) / SIZE);
     }
 }
 
